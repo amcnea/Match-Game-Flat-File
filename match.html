@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+		<title>Match Keys</title>
+		<script type="text/javascript"><!--
+//Sets percent of time various types show up
+//These Five should add up to 100
+document.percent_number     = 0;
+document.percent_upper      = 0;
+document.percent_both       = 0;
+document.percent_lower      = 0;
+document.percent_lower_hard = 100;
+
+//Defines letters that are considered "hard"
+document.lower_hard_letters = "abdefghjmnqrt";
+document.lower_hard_letters = "abde";
+document.forbidden_letters = "lfghjmnqrt";
+
+//Sets the wait time after a question is answered correct or wrong
+document.correct_time = 2;
+document.wrong_time = 10;
+
+//INIT
+document.key_lock = false;
+document.same_till_correct = true;
+
+function pick_letter() {
+	var forbidden = document.forbidden_letters;
+	var answer;
+
+	while(forbidden.indexOf((answer = pick_letter_base01())) > -1){}
+	return answer;
+}
+
+function pick_letter_base01() {
+	var type = Math.floor(Math.random()*100 + 1);
+	var percent = document.percent_number;
+
+	if(type <= percent) {
+		var num = Math.floor(Math.random()*10);
+		return String.fromCharCode(48+num);
+	}
+	else {
+		var num = Math.floor(Math.random()*26);
+		if(type <= (percent += document.percent_upper)) {
+			return String.fromCharCode(65+num);
+		}
+		else if(type <= (percent += document.percent_both)) {
+			return String.fromCharCode(65+num) + "&nbsp;" + String.fromCharCode(97+num);
+		}
+		else {
+			var hard = document.lower_hard_letters;
+			if(type <= (percent += document.percent_lower)) {
+				var easy = invert_alphabet(hard);
+				var num = Math.floor(Math.random()*easy.length);
+				return easy[num];
+			}
+			else {
+				var num = Math.floor(Math.random()*hard.length);
+				return hard[num];
+			}
+		}
+	}
+}
+
+function invert_alphabet(hard) {
+	var alphabet = "abcdefghijklmnopqrstuvwxyz";
+	var easy = "";
+	for( var i=0; i < alphabet.length; i++) {
+		if(hard.indexOf(alphabet[i]) < 0) {
+			easy += alphabet[i];
+		}
+	}
+	return easy;
+}
+
+function get_current_letter() {
+	return document.getElementById("current_letter").innerHTML;
+}
+
+function convert_letter(letter) {
+	return letter.toUpperCase().charCodeAt(0);
+}
+
+function question_report() {
+	var c_questions = document.getElementById("correct_questions");
+	var c_guesses = document.getElementById("correct_guesses");
+	var w_guesses = document.getElementById("wrong_guesses");
+
+	var wgnum = parseInt(w_guesses.innerHTML);
+
+	return { wg:wgnum,
+	         wq:((wgnum)?1:0),
+	         cg:((!wgnum)?1:0),
+	         cq:1
+	       };
+		
+}
+function increment_correct() {
+	var c_questions = document.getElementById("correct_questions");
+	var cqnum = parseInt(c_questions.innerHTML);
+	
+	var c_guesses = document.getElementById("correct_guesses");
+	var cgnum = parseInt(c_guesses.innerHTML);
+
+	var w_guesses = document.getElementById("wrong_guesses");
+	var wgnum = parseInt(w_guesses.innerHTML);
+
+	if(!wgnum) {
+		c_guesses.innerHTML = cgnum + 1;
+	}
+	c_questions.innerHTML = cqnum + 1;
+	w_guesses.innerHTML = 0;
+}
+
+function increment_wrong() {
+	var questions = document.getElementById("wrong_questions");
+	var qnum = parseInt(questions.innerHTML);
+
+	var guesses = document.getElementById("wrong_guesses");
+	var gnum = parseInt(guesses.innerHTML);
+
+	if(!gnum) {
+		questions.innerHTML = qnum + 1;
+	}
+	guesses.innerHTML = gnum + 1;
+}
+
+function valid_key(index) {
+	if( (index >= 65 && index <= 90) ||
+	    (index >= 48 && index <= 57) ||
+	    (index == 59) ||
+	    (index == 61) ||
+	    (index == 109) ||
+	    (index == 188) ||
+	    (index == 190) ||
+	    (index == 191) ||
+	    (index == 192) ||
+	    (index == 219) ||
+	    (index == 220) ||
+	    (index == 221) ||
+	    (index == 222) )
+		return true;
+	else
+		return false;
+}
+
+document.letter_log = "";
+function change_current() {
+	var output = document.getElementById("current_letter").innerHTML;
+	var current = output.substr(0,1).toLowerCase();
+	var _new, new_letter, r_log = "", logging = true;
+	do {
+		report = question_report();
+		_new = pick_letter();
+
+		if(logging) {
+			if(current) {
+				r_log = "--" + 
+			                "C(" + report.cq + "," + report.cg + ")--" +
+			                "W(" + report.wq + "," + report.wg + ")"+"\n";
+			}
+			logging = false;
+		}
+		new_letter = _new.substr(0,1).toLowerCase();
+	} while( current == new_letter)
+	document.letter_log += r_log + _new;
+	document.getElementById("current_letter").innerHTML = _new;
+	if(document.getElementById("correct_letter").innerHTML == "") {
+		document.getElementById("correct_letter").innerHTML = _new;
+	}
+}
+
+function shift_pressed(e) {
+	var evt = e ? e:window.event;
+
+	if (document.layers && navigator.appName=="Netscape" &&
+	    parseInt(navigator.appVersion)==4) {
+		// NETSCAPE 4 CODE
+		var mString =(e.modifiers+32).toString(2).substring(3,6);
+		shiftPressed=(mString.charAt(0)=="1");	}
+	else {
+		// NEWER BROWSERS [CROSS-PLATFORM]
+		shiftPressed=evt.shiftKey;
+	}
+	return shiftPressed;
+}
+
+function input_keypress(e) {
+	if(document.key_lock == true) {
+		return;
+	}
+	var key_code = (e.which) ? e.which : e.keyCode;
+	if(key_code == 123 && shift_pressed(e)) {
+		alert(document.letter_log);
+	}
+
+
+	document.key_lock = true;
+	
+	if(!valid_key(key_code)) {
+		document.key_lock = false;
+		return;
+	}
+
+	var cur = convert_letter(get_current_letter().substr(0,1));
+ 
+	if(cur == key_code) {
+		start_countdown("correct", document.correct_time);
+		change_current(); //must be before increment
+		increment_correct();
+	}
+	else {
+		start_countdown("wrong", document.wrong_time);
+		if(!document.same_till_correct) {
+			change_current(); //must be before increment
+		}
+		increment_wrong();
+	}
+}
+
+function start_countdown(name, time) {
+	document.getElementById(name+"_countdown").innerHTML = time;
+	document.getElementById(name+"_answer").style.display="";
+	setTimeout(function() { decrement_countdown(name); }, 1000);
+}
+
+function decrement_countdown(name) {
+	var val = parseInt(document.getElementById(name+"_countdown").innerHTML);
+	var new_val = val - 1;
+	document.getElementById(name+"_countdown").innerHTML = new_val;
+	if(new_val > 0) {
+		setTimeout(function() { decrement_countdown(name); }, 1000);
+	}
+	else {
+		document.getElementById(name+"_answer").style.display="none";
+		if(document.same_till_correct) {
+			if(name == "correct") {
+				document.getElementById("correct_letter").innerHTML = document.getElementById("current_letter").innerHTML;
+			}
+		}
+		else {
+			document.getElementById("correct_letter").innerHTML = document.getElementById("current_letter").innerHTML;
+		}
+		document.key_lock = false;
+	}
+}
+		--></script>
+	</head>
+	<body style="text-align:center; font-family:Arial; background-color:#cccccc;" onkeyup="input_keypress(event);" onload="change_current()">
+		<div>
+			<div style="padding-bottom:20px">Can you match the key?</div>
+			<div id="current_letter" style="padding-bottom:5px; font-size:340pt;"></div>
+			<div style="padding-bottom:20px; display:none;">
+				<input type="text" id="letter_input">
+			</div>
+		</div>
+		<div>
+			<span style="float:left; color:green;">
+				Correct: 
+				<span id="correct_questions">0</span>
+				:
+				<span id="correct_guesses">0</span>
+			</span>
+			<span style="float:right; color:red;">
+				Wrong: 
+				<span id="wrong_questions">0</span>
+				:
+				<span id="wrong_guesses">0</span>
+			</span>
+
+		</div>
+		<div id="correct_answer" 
+		     style="position:absolute; display:none;
+					top: 40px;
+			        left: 50%;
+			        width:900px;
+		            height:550px;
+		            border:3px solid green;
+		            background:white;
+			        margin-left:-450px;">
+			<div style="font-size:80pt; color:green; margin-top:10px;">CORRECT</div>
+			<div style="font-size:220pt; color:green;" id="correct_letter"></div>
+			<div style="margin-top:10px; font-size: 20pt;">
+				Next: <span id="correct_countdown"></span>
+			</div>
+		</div>
+		<div id="wrong_answer" 
+		     style="position:absolute; display:none;
+					top: 40px;
+			        left: 50%;
+			        width:900px;
+		            height:550px;
+		            border:3px solid red;
+		            background:white;
+			        margin-left:-450px;">
+			<div style="font-size:80pt; color:red; margin-top:10px;">WRONG</div>
+			<div style="margin-top:340px; font-size: 20pt;">
+				Next: <span id="wrong_countdown"></span>
+			</div>
+		</div>
+	</body>
+</html>
